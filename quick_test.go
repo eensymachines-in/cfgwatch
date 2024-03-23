@@ -40,9 +40,10 @@ func TestSendRabbitMessage(t *testing.T) {
 	json.Unmarshal(byt, &cfg)
 	// Modifying the existing configuration
 	cfg.AppName = "Aquaponics control centrale"
-	cfg.Schedule.TickAt = "20:30"
-	cfg.Schedule.PulseGap = 600
-	cfg.Schedule.Config = 2
+	cfg.Schedule.TickAt = "13:40"
+	cfg.Schedule.PulseGap = 3
+	cfg.Schedule.Interval = 10
+	cfg.Schedule.Config = 1
 
 	body, _ := json.Marshal(&cfg)
 	err := ch.Publish(

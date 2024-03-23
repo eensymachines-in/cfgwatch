@@ -37,11 +37,13 @@ const (
 )
 
 var (
-	AMQP_LOGIN      = "guest:guest"               // rabbitmq credentials
-	AMQP_SERVER     = "192.168.1.102:30073"       // rabbitmq base url location
-	CONFIG_PATH     = "/etc/aquapone.config.json" // location of the configuration to write
-	RESTART_SERVICE = "aquapone.service"          // name of the service
-	SYSCTL_CMD      = RESTART                     // after the configuration is applied
+	AMQP_LOGIN          = "guest:guest"               // rabbitmq credentials
+	AMQP_SERVER         = "192.168.1.102:30073"       // rabbitmq base url location
+	CONFIG_PATH         = "/etc/aquapone.config.json" // location of the configuration to write
+	RESTART_SERVICE     = "aquapone.service"          // name of the service
+	SYSCTL_CMD          = RESTART                     // after the configuration is applied
+	RETRIES_BEFORE_FAIL = 1                           // tries to establish amqp connection
+	SLEEP_BEFORE_RETRY  = 5 * time.Second
 )
 
 func init() {
@@ -99,13 +101,16 @@ func main() {
 			cancel() // time for all the program to go down
 		}
 	}()
-
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s@%s/", os.Getenv("AMQP_LOGIN"), os.Getenv("AMQP_SERVER")))
-	if err != nil {
-		log.Panicf("Failed to connect to Rabbit server %s", err)
+	if err != nil { // can no longer continue
+		log.WithFields(log.Fields{
+			"login":  os.Getenv("AMQP_LOGIN"),
+			"server": os.Getenv("AMQP_SERVER"),
+		}).Panic("Failed to connect to AMQP server, are you connected to network?")
 		return
 	}
 	defer conn.Close()
+	log.Debug("Connected to AMQP server")
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Panicf("Failed to initiate channel on Rabbit server %s", err)
@@ -150,7 +155,7 @@ func main() {
 				log.Debug("Received command..")
 				cfg := aquacfg.AppConfig{}
 				// NOTE: cannot send in partial configuration, even if unchanged the entire configuration has to be shuttled to-fro for the changes to be applied correctly
-				err := json.Unmarshal(d.Body, &cfg) //reading config from messages
+				err := json.Unmarshal(d.Body, &cfg.Schedule) //reading config from messages
 				if err != nil {
 					log.Errorf("Failed to read command message from Rabbit %s", err)
 					continue

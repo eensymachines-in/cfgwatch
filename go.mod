@@ -3,7 +3,7 @@ module github.com/eensymachines-in/cfgwatch
 go 1.19
 
 require (
-	github.com/eensymachines-in/patio v0.0.0-20240313125010-675176f9fa0a
+	github.com/eensymachines-in/patio v0.0.0-20240314030856-c2615bcf37d4
 	github.com/sirupsen/logrus v1.9.3
 	github.com/streadway/amqp v1.1.0
 	github.com/stretchr/testify v1.8.4

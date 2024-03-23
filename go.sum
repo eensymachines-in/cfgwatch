@@ -11,8 +11,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/donovanhide/eventsource v0.0.0-20171031113327-3ed64d21fb0b/go.mod h1:56wL82FO0bfMU5RvfXoIwSOP2ggqqxT+tAfNEIyxuHw=
 github.com/eclipse/paho.mqtt.golang v1.2.0/go.mod h1:H9keYFcgq3Qr5OUJm/JZI/i6U7joQ8SYLhZwfeOo6Ts=
-github.com/eensymachines-in/patio v0.0.0-20240313125010-675176f9fa0a h1:M0f1vH5UHyqJhAJNAyNCctuMs0ATbyvhEe93wRfqGyI=
-github.com/eensymachines-in/patio v0.0.0-20240313125010-675176f9fa0a/go.mod h1:zqv2iWFvsnW6RgqSN6CEznsJbXeiMrL6S/syXh+coPk=
+github.com/eensymachines-in/patio v0.0.0-20240314030856-c2615bcf37d4 h1:5ltoSmVhtcVuOtlB4YqU91Z9qaC6jBWtsE9ZeF+cpTg=
+github.com/eensymachines-in/patio v0.0.0-20240314030856-c2615bcf37d4/go.mod h1:zqv2iWFvsnW6RgqSN6CEznsJbXeiMrL6S/syXh+coPk=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
 github.com/go-ble/ble v0.0.0-20190521171521-147700f13610/go.mod h1:UMPB54/KFpdTdfH7Yovhk3J6kzgzE88e3QZi8cbayis=
 github.com/go-ole/go-ole v1.2.4/go.mod h1:XCwSNxSkXRo4vlyPy93sltvi/qJq0jqQhjqQNIwKuxM=
