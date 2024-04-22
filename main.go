@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -59,12 +62,15 @@ func init() {
 	*/
 	for _, v := range []string{
 		"PATH_APPCONFIG",
+		"PATH_APPREG",
+		"UPSTREAM_URL",
 		"NAME_SYSCTLSERVICE",
 		"MODE_SYSCTLCMD",
 		"MODE_DEBUGLVL",
 		"AMQP_SERVER",
 		"AMQP_LOGIN",
-		"AMQP_CFGCHNNL",
+		"AMQP_QUE",
+		"AMQP_XCHG",
 	} {
 		if val := os.Getenv(v); val == "" {
 			log.Panicf("Required environment variable missing in ~/.bashrc: %s", v)
@@ -85,6 +91,186 @@ func init() {
 
 }
 
+// jsonFToMap : reads in any json file, and sends out map as a resutl
+func jsonFToMap(path string) (map[string]interface{}, error) {
+	result := map[string]interface{}{}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	byt, err := io.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(byt, &result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+
+}
+
+// listenOnRabbitQ : sets up the listening queue on the exchange aas specified
+// NOTE: all the environment variables required to connect successfully
+// returns a channel over which messages can be subscribed to
+// cancel function that lets you clos econnection
+// error incase connecting with amqp gateway
+// routing key is the mac id of the device - hence this takes in the mac id
+func listenOnRabbitQ(macid string) (<-chan amqp.Delivery, func(), error) {
+	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s@%s/", os.Getenv("AMQP_LOGIN"), os.Getenv("AMQP_SERVER")))
+	if err != nil || conn == nil {
+		return nil, nil, fmt.Errorf("failed to connect to AMQP server %s", err)
+	}
+	closeConn := func() {
+		log.Warn("Now closing rabbit connection..")
+		conn.Close()
+	}
+	log.WithFields(log.Fields{
+		"connect_notnil": conn != nil,
+	}).Debug("amqp dial..")
+	ch, err := conn.Channel()
+	if err != nil || ch == nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("failed to open any rabbit channel")
+		return nil, closeConn, fmt.Errorf("unable to get channel from connection %s", err)
+	}
+	q, err := ch.QueueDeclare(
+		os.Getenv("AMQP_QUE"), //Qname
+		false,                 // durable
+		false,                 //auto delete
+		false,                 //exclusive
+		false,                 // nowait
+		nil,
+	)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err":    err,
+			"q_name": os.Getenv("AMQP_QUE"),
+		}).Error("failed q declaration..")
+		return nil, closeConn, fmt.Errorf("failed to declare queue  %s", err)
+	}
+	log.WithFields(log.Fields{
+		"q_name": q.Name,
+	}).Debug("queue declared..")
+	err = ch.QueueBind(q.Name, macid, os.Getenv("AMQP_XCHG"), false, nil)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err":    err,
+			"q_name": os.Getenv("AMQP_QUE"),
+		}).Error("failed q binding..")
+		return nil, closeConn, fmt.Errorf("exchange binding failed %s", err)
+	}
+	log.WithFields(log.Fields{
+		"x_name": os.Getenv("AMQP_XCHG"),
+	}).Debug("queue bound to exchange..")
+	msgs, err := ch.Consume(
+		q.Name, // queue
+		"",     // consumer
+		true,   // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("failed start consuming..")
+		return nil, closeConn, fmt.Errorf("failed to setup consuming channel on amqp queue %s", err)
+	}
+	log.Debug("start consuming messagess..")
+	log.WithFields(log.Fields{
+		"mac":      macid,                  //topic for routing
+		"q_name":   q.Name,                 // name of the queue
+		"exchange": os.Getenv("AMQP_XCHG"), // name of the excahnge
+	}).Info("Now listening on rabbit connection ..")
+	return msgs, closeConn, nil
+}
+
+// checkRegOrRegister : Checks for the registry of the device
+// If device is already registered will proceed ok with no action
+// Incase the device isnt registered will register and then proceed ok
+// Incase registry isnt able to confirm or the device isnt able to register itself then error
+// incase of error the service will fall apart
+// sends back the registration object as well
+func checkRegOrRegister() error {
+	regis, err := jsonFToMap(os.Getenv("PATH_APPREG"))
+	if err != nil {
+		return err
+	}
+	config, err := jsonFToMap(os.Getenv("PATH_APPCONFIG"))
+	if err != nil {
+		return err
+	}
+	log.WithFields(log.Fields{
+		"reg_is_nil": regis == nil,
+		"cfg_is_nil": config == nil,
+	}).Debug("failed to read configuration files..")
+	regis["cfg"] = config["schedule"]
+	log.WithFields(log.Fields{
+		"regis": regis,
+	}).Debug("merging registration and configuration")
+
+	url := fmt.Sprintf("%s/%s", os.Getenv("UPSTREAM_URL"), regis["mac"])
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	cl := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	resp, err := cl.Do(req)
+	if err != nil {
+		return err
+	}
+	log.WithFields(log.Fields{
+		"url": os.Getenv("UPSTREAM_URL"),
+	}).Debug("queried server for existing configuration")
+
+	if resp.StatusCode == http.StatusNotFound {
+		// time to register device with the server
+		log.Debug("registration not found..")
+		url = os.Getenv("UPSTREAM_URL")
+		byt, err := json.Marshal(regis)
+		if err != nil {
+			return err
+		}
+		req, err = http.NewRequest("POST", url, bytes.NewReader(byt))
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err = cl.Do(req)
+		if err != nil {
+			return err
+		}
+		if resp.StatusCode != http.StatusOK {
+			return fmt.Errorf("error registering device %d", resp.StatusCode)
+		} else {
+			log.Info("registered new device..")
+		}
+	} else if resp.StatusCode == http.StatusOK {
+		defer resp.Body.Close()
+		byt, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Warn("failed to read registration")
+		}
+		result := map[string]interface{}{}
+		json.Unmarshal(byt, &result)
+
+		log.WithFields(log.Fields{
+			"mac":  result["mac"],
+			"name": result["name"],
+			"make": result["make"],
+		}).Info("existing registration found")
+		return nil
+	} else {
+		return fmt.Errorf("error getting device registration %d", resp.StatusCode)
+	}
+	return nil
+}
+
 func main() {
 	log.Info("Now starting config watcher application")
 	defer log.Warn("Closing config watcher application")
@@ -101,47 +287,21 @@ func main() {
 			cancel() // time for all the program to go down
 		}
 	}()
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s@%s/", os.Getenv("AMQP_LOGIN"), os.Getenv("AMQP_SERVER")))
-	if err != nil { // can no longer continue
-		log.WithFields(log.Fields{
-			"login":  os.Getenv("AMQP_LOGIN"),
-			"server": os.Getenv("AMQP_SERVER"),
-		}).Panic("Failed to connect to AMQP server, are you connected to network?")
+	/* Check for device registration upstream
+	Incase the device isnt registered it would then register itself first */
+	if err := checkRegOrRegister(); err != nil {
+		log.Fatalf("Failed to check for device registry upstream %s", err)
 		return
 	}
-	defer conn.Close()
-	log.Debug("Connected to AMQP server")
-	ch, err := conn.Channel()
+	regis, err := jsonFToMap(os.Getenv("PATH_APPREG"))
 	if err != nil {
-		log.Panicf("Failed to initiate channel on Rabbit server %s", err)
-		return
+		log.Fatal("unable to read device registration")
 	}
-	q, err := ch.QueueDeclare(
-		os.Getenv("AMQP_CFGCHNNL"), // name
-		false,                      // durable
-		false,                      // delete when unused
-		false,                      // exclusive
-		false,                      // no-wait
-		nil,                        // arguments
-	)
+	msgs, closeConn, err := listenOnRabbitQ(regis["mac"].(string))
 	if err != nil {
-		log.Panicf("Failed to declare queue on Rabbit server %s", err)
-		return
+		log.Fatal(err)
 	}
-	log.Info("connected to RabbitMQ...")
-	msgs, err := ch.Consume(
-		q.Name, // queue
-		"",     // consumer
-		true,   // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // args
-	)
-	if err != nil {
-		log.Panicf("Failed to setup consuming channel on rabbit server %s", err)
-		return
-	}
+	defer closeConn()
 
 	wg.Add(1)
 	go func() {

@@ -1,0 +1,10 @@
+{
+    "mac": "b8:27:eb:a5:be:48",
+    "name": "Aquaponics pump control-I, Saidham",
+    "make": "Linux rpi0w 6.1.0-rpi8-rpi-v6 #1 Raspbian 1:6.1.73-1+rpt1 (2024-01-25) armv6l GNU/Linux",
+    "users": [
+        "kneerunjun@gmail.com",
+        "metconspune@gmail.com"
+    ],
+    "location": "18.417440, 73.769136"
+}
