@@ -118,3 +118,46 @@ ExecStart=/usr/bin/cfgwatch
 ```
 A streamlined negotiation loop coded in GoLang, designed to monitor RabbitMQ for message triggers signaling changes in configuration. This system can dynamically adjust configurations and initiate restarts for the specified services as needed.
 
+#### Build and get going:
+-----
+
+To build the Go Application and setup the systemctl services 
+
+```sh 
+# Without sudo 
+./build.sh 
+```
+
+```sh 
+systemctl status cfgwatch.service
+```
+```sh
+● cfgwatch.service - Starts the configuration watch service on the device
+     Loaded: loaded (/etc/systemd/system/cfgwatch.service; enabled; preset: enabled)
+     Active: active (running) since Tue 2024-04-23 09:02:40 IST; 3h 34min ago
+   Main PID: 1678 (cfgwatch)
+      Tasks: 7 (limit: 377)
+        CPU: 3.047s
+     CGroup: /system.slice/cfgwatch.service
+             └─1678 /usr/bin/cfgwatch
+
+Apr 23 09:02:42 rpi0w cfgwatch[1678]: time="2024-04-23T09:02:42+05:30" level=debug ms>
+Apr 23 09:02:42 rpi0w cfgwatch[1678]: time="2024-04-23T09:02:42+05:30" level=debug ms>
+Apr 23 09:02:42 rpi0w cfgwatch[1678]: time="2024-04-23T09:02:42+05:30" level=debug ms>
+Apr 23 09:02:42 rpi0w cfgwatch[1678]: time="2024-04-23T09:02:42+05:30" level=info msg>
+Apr 23 09:13:07 rpi0w cfgwatch[1678]: time="2024-04-23T09:13:07+05:30" level=debug ms>
+Apr 23 09:13:07 rpi0w cfgwatch[1678]: time="2024-04-23T09:13:07+05:30" level=debug ms>
+Apr 23 09:13:07 rpi0w sudo[1813]:     root : PWD=/ ; USER=root ; COMMAND=/usr/bin/sys>
+Apr 23 09:13:07 rpi0w sudo[1813]: pam_unix(sudo:session): session opened for user roo>
+Apr 23 09:13:07 rpi0w sudo[1813]: pam_unix(sudo:session): session closed for user root
+Apr 23 09:13:07 rpi0w cfgwatch[1678]: time="2024-04-23T09:13:07+05:30" level=debug ms>
+lines 1-19/19 (END)
+
+```
+
+As you can notice the `cfgwatch` service is up and running, send commands via the rabbit broker to change the schedule configuration.
+To see the logs for the running service here is the command 
+
+```sh
+journalctl -u cfgwatch.service --since today
+```
