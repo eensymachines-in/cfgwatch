@@ -2,17 +2,21 @@
 Microservice running on the device that maintains a subscriber link to the upstream [webapi-devicereg]() server for the commands to receive and cross checking the device registration.
 
 ```
-            rabbit--amqp  webapi-devicereg <----| (new registration self)
-                    |    (check registration)    | 
-                    v            |               |
-                    |            ^               |
-            (json command)      v               |
-            cfgwatch.service ---|---------------|
-                    |
-                    |-------------------|
-                    v                   |- (restart)
-                    |-(write)           |
-            aquapone.config.json        aquapone.service
+        rabbit--amqp    webapi-devicereg <--| 
+                |    (check registration)   ^ 
+                v           |               |
+                |        HTTP GET       HTTP POST
+        (json command)      v               |
+        cfgwatch.service----|-----------|---|
+                |        read         read
+                |---------|             |
+                write     |             |        
+        |-------|         ^             ^
+        |        v        |             |
+        |    aquapone.config.json    aquapone.reg.json  
+    restart
+        |
+    aquapone.service
 ```     
 
 ### Setting up  
