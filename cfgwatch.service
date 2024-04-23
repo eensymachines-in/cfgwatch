@@ -5,13 +5,13 @@ Requires=network-online.target
 
 [Service]
 Type=simple
+# global environment defined at /etc/environment - need not define here
 Environment="PATH_APPCONFIG=/etc/aquapone.config.json" 
 Environment="PATH_APPREG=/etc/aquapone.reg.json" 
 Environment="UPSTREAM_URL=http://aqua.eensymachines.in:30001/api/devices"
 Environment="NAME_SYSCTLSERVICE=aquapone.service" 
 Environment="MODE_SYSCTLCMD=0" 
 Environment="MODE_DEBUGLVL=5" 
-
 Environment="AMQP_SERVER=aqua.eensymachines.in:30567" 
 Environment="AMQP_LOGIN=eensyiot-admin:33n5y4dm1n" 
 Environment="AMQP_QUE=config-alerts" 
