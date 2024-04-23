@@ -9,10 +9,10 @@ Upon failure to register or error getting the registration the service shall pan
 On receiving a json command from RabbitMQ this service shall overwrite the config.json file and restart the main `aquapone.service`
 ```
         rabbit--amqp    webapi-devicereg <--| 
-                |          (device registration)
+        (json command)  (device registration)
                 v           |               |
                 |        HTTP GET       HTTP POST
-        (json command)      v               |
+                |           v               |
         cfgwatch.service----|-----------|---|
                 |        read         read
                 |---------|             |
