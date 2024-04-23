@@ -3,7 +3,7 @@ Microservice running on the device that maintains a subscriber link to the upstr
 
 ```
         rabbit--amqp    webapi-devicereg <--| 
-                |    (check registration)   ^ 
+                |          (device registration)
                 v           |               |
                 |        HTTP GET       HTTP POST
         (json command)      v               |
@@ -12,7 +12,7 @@ Microservice running on the device that maintains a subscriber link to the upstr
                 |---------|             |
                 write     |             |        
         |-------|         ^             ^
-        |        v        |             |
+        |       v        |             |
         |    aquapone.config.json    aquapone.reg.json  
     restart
         |
