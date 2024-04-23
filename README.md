@@ -1,6 +1,20 @@
 # CfgWatch
 Microservice running on the device that maintains a subscriber link to the upstream [webapi-devicereg]() server for the commands to receive and cross checking the device registration.
 
+```
+            rabbit--amqp  webapi-devicereg <----| (new registration self)
+                    |    (check registration)    | 
+                    v            |               |
+                    |            ^               |
+            (json command)      v               |
+            cfgwatch.service ---|---------------|
+                    |
+                    |-------------------|
+                    v                   |- (restart)
+                    |-(write)           |
+            aquapone.config.json        aquapone.service
+```     
+
 ### Setting up  
 ---- 
 
@@ -160,4 +174,9 @@ To see the logs for the running service here is the command
 
 ```sh
 journalctl -u cfgwatch.service --since today
+```
+To check to see if schedule has been changed 
+
+```sh
+cat /etc/aquapone.config.json
 ```
