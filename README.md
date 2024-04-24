@@ -1,10 +1,12 @@
-# CfgWatch
-Systemd service running on the device that maintains a subscriber link to the upstream [webapi-devicereg]() server for the commands to receive and cross checking the device registration. When no registration is identified on the server, the device shall go ahead to register itself. Registration information of the device is found combined from 2 files 
+# CfgWatch.service
+---
+Systemd service running on the device that maintains a subscriber link to the upstream [webapi-devicereg](https://github.com/eensymachines-in/webapi-devicereg) server for the commands to receive and cross checking the __device registration__. When no registration is identified on the server, the device shall go ahead to register itself. Registration information of the device is found combined from 2 files:
+
 1. aquapone.config.json
 2. auapone.reg.json
 
 Subsequnetly after this one time registration the device can then just get 200OK from the server as an indication that the device is registered. 
-Upon failure to register or error getting the registration the service shall panic fatally and will be aborted. - Currently we make only one attempt to establish link to the upstream server and verify the registartion. 
+Upon failure to register or error getting the registration the service shall panic fatally and will be aborted. - __Currently we make only one attempt to establish link to the upstream server and verify the registartion.__
 
 On receiving a json command from RabbitMQ this service shall overwrite the config.json file and restart the main `aquapone.service`
 ```
