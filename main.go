@@ -221,6 +221,7 @@ func checkRegOrRegister() error {
 		Timeout: 5 * time.Second,
 	}
 	resp, err := cl.Do(req)
+	/* No retries are required since the service will start only when the connection is up and running */
 	if err != nil {
 		return err
 	}

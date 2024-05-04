@@ -16,7 +16,9 @@ Environment="AMQP_SERVER=aqua.eensymachines.in:30567"
 Environment="AMQP_LOGIN=eensyiot-admin:33n5y4dm1n" 
 Environment="AMQP_QUE=config-alerts" 
 Environment="AMQP_XCHG=configs_direct" 
-
+# https://askubuntu.com/questions/1363944/systemd-only-run-service-after-internet-is-up
+# Since we want th service to be up only when the internet is up and running 
+ExecStartPre= /bin/sh -c 'until ping -c1 google.com; do sleep 1; done;'
 ExecStart=/usr/bin/cfgwatch
 
 
