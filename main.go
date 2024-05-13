@@ -167,7 +167,7 @@ func listenOnRabbitQ(macid string) (<-chan amqp.Delivery, func(), error) {
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
-		true,   // auto-ack
+		false,  // auto-ack // if its true the server does not care to wait for the acknowledgement
 		false,  // exclusive
 		false,  // no-local
 		false,  // no-wait
@@ -318,7 +318,9 @@ func main() {
 				// NOTE: cannot send in partial configuration, even if unchanged the entire configuration has to be shuttled to-fro for the changes to be applied correctly
 				err := json.Unmarshal(d.Body, &cfg.Schedule) //reading config from messages
 				if err != nil {
-					log.Errorf("Failed to read command message from Rabbit %s", err)
+					log.WithFields(log.Fields{
+						"body": string(d.Body),
+					}).Errorf("Failed to read command message from Rabbit %s", err)
 					continue
 				}
 				byt, _ := json.Marshal(&cfg)
@@ -327,6 +329,7 @@ func main() {
 					continue
 				}
 				log.Debug("New configuration applied..")
+				d.Ack(false) // since auto ack is disabled on the consume method
 				/*
 					Service action after the configuration is applied
 					This is configurable from command line arguments
